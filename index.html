@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>XX 计算器合集</title>
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --card:#ffffff;
+    --accent:#2b7cff;
+    --muted:#666;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;background:var(--bg);color:#111;}
+  /* 登录区 */
+  #loginWrap{height:100vh;display:flex;align-items:center;justify-content:center;}
+  .loginBox{background:var(--card);padding:24px;border-radius:12px;box-shadow:0 8px 24px rgba(20,30,60,0.08);width:360px;text-align:center;}
+  .loginBox h2{margin:0 0 12px;font-size:20px;}
+  .loginBox input{width:100%;padding:10px 12px;margin-top:8px;border:1px solid #e0e6f0;border-radius:8px;font-size:15px;}
+  .loginBox .row{display:flex;gap:8px;margin-top:12px;}
+  .loginBox button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;width:100%;}
+  .purchaseRow{margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;}
+  /* 主界面 */
+  .app{display:flex;flex-direction:column;height:100vh;}
+  header.appHeader{padding:18px 22px;background:linear-gradient(90deg,#fff 0%, #fbfdff 100%);box-shadow:0 1px 0 rgba(0,0,0,0.04);}
+  header.appHeader h1{margin:0;font-size:22px;}
+  main.appMain{padding:14px;flex:1;display:grid;grid-template-rows: repeat(2, 1fr);grid-template-columns: repeat(5, 1fr);gap:14px;}
+  .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(20,30,60,0.04);display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;}
+  .card h3{margin:0 0 10px 0;font-size:16px;}
+  .card .placeholder{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;}
+  .card.disabled{opacity:1;}
+  /* 卡片界面（跳转后显示） */
+  .panel{position:fixed;inset:0;background:#f7fafc;display:flex;flex-direction:column;z-index:30;padding:18px;overflow:auto;}
+  .panelHeader{display:flex;align-items:center;gap:12px;}
+  .backBtn{padding:8px 12px;border-radius:8px;border:0;background:#eee;cursor:pointer;}
+  .panelBody{margin-top:12px;flex:1;display:flex;flex-direction:column;gap:12px;}
+  /* 计算器样式（用于 card1 的界面） */
+  .calcWrap{max-width:720px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+  .display{min-height:56px;border-radius:8px;border:1px solid #e6ecf8;padding:8px 12px;font-size:22px;background:#fff;display:flex;align-items:center;justify-content:flex-end;word-break:break-all;}
+  .pad{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:auto;}
+  .btn{padding:14px;border-radius:10px;border:0;font-size:18px;cursor:pointer;background:#f2f6ff;user-select:none;}
+  .btn.op{background:#fff7e6;}
+  .btn.equal{background:var(--accent);color:#fff;grid-column:span 2;}
+  .btn:active{transform:translateY(1px);}
+  .note{color:var(--muted);font-size:14px;margin-top:12px;text-align:center;}
+  /* 表单简化样式 */
+  .formRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .formRow input[type="number"], .formRow input[type="text"], .formRow select, textarea{
+    padding:8px;border-radius:8px;border:1px solid #e6ecf8;font-size:14px;
+  }
+  .table{width:100%;border-collapse:collapse;}
+  .table th, .table td{padding:8px;border:1px solid #eef2f7;text-align:left;}
+  .small{font-size:13px;color:var(--muted);}
+  /* 响应 */
+  @media (max-width:900px){
+    main.appMain{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(5,1fr);}
+    .loginBox{width:92%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- 登录视图 -->
+<div id="loginWrap">
+  <div class="loginBox" id="loginBox">
+    <h2>请输入密码以进入</h2>
+    <input id="initialPwd" type="password" placeholder="密码">
+    <div class="row">
+      <button id="loginBtn">进入</button>
+    </div>
+
+    <!-- 放在密码输入下面：请购买秘钥（仅提示） -->
+    <div class="purchaseRow" aria-hidden="false">
+      <span>请购买秘钥</span>
+      <span style="font-size:18px;">💰</span>
+    </div>
+  </div>
+</div>
+
+<!-- 主应用（初始隐藏） -->
+<div id="app" class="app" style="display:none;">
+  <header class="appHeader"><h1>XX 计算器合集</h1></header>
+
+  <main class="appMain" id="grid">
+    <!-- 卡片 1..10 -->
+    <div class="card" onclick="openCard('card1')">
+      <h3>1. 普通计算器</h3>
+      <div class="placeholder">点击进入使用普通计算器</div>
+    </div>
+
+    <div class="card" onclick="openCard('card2')">
+      <h3>2. 金融计算器</h3>
+      <div class="placeholder">贷款/按揭月供计算</div>
+    </div>
+
+    <div class="card" onclick="openCard('card3')">
+      <h3>3. 投资回报</h3>
+      <div class="placeholder">未来值 & 年化收益率</div>
+    </div>
+
+    <div class="card" onclick="openCard('card4')">
+      <h3>4. 性价比</h3>
+      <div class="placeholder">多项性价比排序</div>
+    </div>
+
+    <div class="card" onclick="openCard('card5')">
+      <h3>5. 利率换算</h3>
+      <div class="placeholder">名义利率 ↔ 有效年利率</div>
+    </div>
+
+    <div class="card" onclick="openCard('card6')">
+      <h3>6. 微积分（积分）</h3>
+      <div class="placeholder">数值定积分</div>
+    </div>
+
+    <div class="card" onclick="openCard('card7')">
+      <h3>7. 微积分（导数）</h3>
+      <div class="placeholder">数值求导</div>
+    </div>
+
+    <div class="card" onclick="openCard('card8')">
+      <h3>8. 代数/方程求解</h3>
+      <div class="placeholder">一元一次/二次方程</div>
+    </div>
+
+    <div class="card" onclick="openCard('card9')">
+      <h3>9. 三角函数</h3>
+      <div class="placeholder">角度/弧度、三角值</div>
+    </div>
+
+    <div class="card" onclick="openCard('card10')">
+      <h3>10. 统计/概率</h3>
+      <div class="placeholder">均值/方差/二项分布</div>
+    </div>
+  </main>
+</div>
+
+<!-- 卡片独立界面（panel）—— 初始隐藏 -->
+<div id="panel" class="panel" style="display:none;">
+  <div class="panelHeader">
+    <button class="backBtn" onclick="closePanel()">← 返回</button>
+    <h2 id="panelTitle" style="margin:0;font-size:18px;"></h2>
+  </div>
+  <div class="panelBody" id="panelBody">
+    <!-- 内容由 JS 注入 -->
+  </div>
+</div>
+
+<script>
+  // ========== 基本站点/登录/导航 ==========
+  const sitePassword = "bebigandstrong";
+  let loggedIn = false;
+  let activeCard = null;
+
+  document.getElementById('loginBtn').addEventListener('click', tryLogin);
+  document.getElementById('initialPwd').addEventListener('keydown', (e)=> { if(e.key==='Enter') tryLogin(); });
+
+  function tryLogin(){
+    const v = document.getElementById('initialPwd').value;
+    if(v === sitePassword){
+      loggedIn = true;
+      document.getElementById('loginWrap').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('initialPwd').value = '';
+    } else {
+      alert('密码错误！');
+    }
+  }
+
+  function openCard(id){
+    if(!loggedIn){ alert('请先输入密码进入网站。'); return; }
+    activeCard = id;
+    document.getElementById('panelTitle').textContent = cardTitle(id);
+    document.getElementById('panelBody').innerHTML = panelContentHTML(id);
+    document.getElementById('panel').style.display = 'flex';
+    // focus first input
+    setTimeout(()=> {
+      const el = document.querySelector('#panel input, #panel textarea, #panel button');
+      if(el) el.focus();
+    }, 50);
+    // reset any per-card state if needed
+    if(id==='card1'){ calc_expr = ''; updateCalcDisp(); }
+    if(id==='card6'){ integral_expr=''; document.getElementById('panelBody') && updateIntegralPreview && updateIntegralPreview(); }
+    if(id==='card7'){ derivative_expr=''; }
+  }
+
+  function closePanel(){
+    activeCard = null;
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('panelBody').innerHTML = '';
+  }
+
+  function cardTitle(id){
+    const map={
+      card1:'普通计算器', card2:'金融计算器', card3:'投资回报',
+      card4:'性价比', card5:'利率换算', card6:'微积分（积分）',
+      card7:'微积分（导数）', card8:'代数/方程求解', card9:'三角函数', card10:'统计/概率'
+    };
+    return map[id]||'计算器';
+  }
+
+  // ========= 每个卡片的 HTML 内容 ==========
+  function panelContentHTML(id){
+    if(id==='card1') return card1HTML();
+    if(id==='card2') return card2HTML();
+    if(id==='card3') return card3HTML();
+    if(id==='card4') return card4HTML();
+    if(id==='card5') return card5HTML();
+    if(id==='card6') return card6HTML();
+    if(id==='card7') return card7HTML();
+    if(id==='card8') return card8HTML();
+    if(id==='card9') return card9HTML();
+    if(id==='card10') return card10HTML();
+    return '<div>未实现</div>';
+  }
+
+  // ---------------- 卡片1：普通计算器 ----------------
+  function card1HTML(){
+    return `
+      <div class="calcWrap">
+        <div id="calcDisplay" class="display">0</div>
+        <div class="pad">
+          <button class="btn" onclick="calcPress('7')">7</button>
+          <button class="btn" onclick="calcPress('8')">8</button>
+          <button class="btn" onclick="calcPress('9')">9</button>
+          <button class="btn op" onclick="calcPress('/')">÷</button>
+
+          <button class="btn" onclick="calcPress('4')">4</button>
+          <button class="btn" onclick="calcPress('5')">5</button>
+          <button class="btn" onclick="calcPress('6')">6</button>
+          <button class="btn op" onclick="calcPress('*')">×</button>
+
+          <button class="btn" onclick="calcPress('1')">1</button>
+          <button class="btn" onclick="calcPress('2')">2</button>
+          <button class="btn" onclick="calcPress('3')">3</button>
+          <button class="btn op" onclick="calcPress('-')">−</button>
+
+          <button class="btn" onclick="calcPress('0')">0</button>
+          <button class="btn" onclick="calcPress('.')">.</button>
+          <button class="btn equal" onclick="calcCompute()">=</button>
+          <button class="btn op" onclick="calcPress('+')">+</button>
+
+          <button class="btn" style="grid-column:span 2;" onclick="calcClear()">C</button>
+          <button class="btn" onclick="calcBack()">⌫</button>
+          <button class="btn" onclick="calcToggleSign()">±</button>
+        </div>
+        <div class="note">支持键盘：数字、+ - * /、Enter=、Backspace=删除、Esc=清除</div>
+      </div>
+    `;
+  }
+
+  // 普通计算器逻辑（仅在打开 card1 时生效）
+  let calc_expr = '';
+  function updateCalcDisp(){
+    const el = document.getElementById('calcDisplay');
+    if(!el) return;
+    el.textContent = calc_expr === '' ? '0' : calc_expr;
+  }
+  function calcPress(ch){
+    if(activeCard !== 'card1') return;
+    if(calc_expr === '0' && ch !== '.') calc_expr = '';
+    calc_expr += ch;
+    updateCalcDisp();
+  }
+  function calcClear(){ if(activeCard!=='card1') return; calc_expr=''; updateCalcDisp(); }
+  function calcBack(){ if(activeCard!=='card1') return; calc_expr = calc_expr.slice(0,-1); updateCalcDisp(); }
+  function calcToggleSign(){
+    if(activeCard!=='card1') return;
+    try {
+      const m = calc_expr.match(/(-?[0-9.]+)$/);
+      if(m){
+        const num = m[1]; const start = calc_expr.slice(0,m.index);
+        const val = parseFloat(num);
+        if(!isNaN(val)) calc_expr = start + ((-val).toString());
+      } else calc_expr = '-';
+    } catch(e){}
+    updateCalcDisp();
+  }
+  function calcCompute(){
+    if(activeCard!=='card1') return;
+    if(calc_expr.trim()==='') return;
+    const safe = /^[0-9+\-*/().\s]+$/;
+    if(!safe.test(calc_expr)){ alert('表达式包含不允许的字符'); return; }
+    try{
+      const jsExpr = calc_expr.replace(/×/g,'*').replace(/÷/g,'/');
+      const res = Function('"use strict";return ('+jsExpr+')')();
+      calc_expr = (typeof res==='number' && isFinite(res)) ? String(res) : '0';
+      updateCalcDisp();
+    }catch(e){
+      alert('计算错误：' + (e.message || e));
+    }
+  }
+
+  // 键盘支持（仅在 card1 面板打开时生效）
+  window.addEventListener('keydown', function(e){
+    if(!loggedIn) return;
+    if(activeCard !== 'card1') return;
+    const k = e.key;
+    if((/^[0-9]$/.test(k)) || k==='.') { calcPress(k); e.preventDefault(); }
+    else if(k==='+'||k==='-'||k==='*'||k==='/'){ calcPress(k); e.preventDefault(); }
+    else if(k==='Enter'){ calcCompute(); e.preventDefault(); }
+    else if(k==='Backspace'){ calcBack(); e.preventDefault(); }
+    else if(k==='Escape'){ calcClear(); e.preventDefault(); }
+  });
+
+  // ---------------- 卡片2：金融计算器（贷款/按揭） ----------------
+  function card2HTML(){
+    return `
+      <div style="max-width:720px;margin:0 auto;">
+        <div class="formRow" style="gap:10px;flex-wrap:wrap;">
+          <label>贷款本金 (元): <input id="loanP" type="number" step="0.01" value="100000"></label>
+          <label>年利率 (%) : <input id="loanR" type="number" step="0.0001" value="4.9"></label>
+          <label>期限 (年) : <input id="loanY" type="number" step="1" value="20"></label>
+          <label>还款频率:
+            <select id="loanFreq">
+              <option value="12">按月</option>
+              <option value="1">按年</option>
+            </select>
+          </label>
+          <button class="btn" onclick="calcLoan()">计算</button>
+        </div>
+        <div id="loanResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">说明：等额本息计算公式已使用常见公式。</div>
+      </div>
+    `;
+  }
+  function calcLoan(){
+    if(activeCard!=='card2') return;
+    const P = parseFloat(document.getElementById('loanP').value) || 0;
+    const r_ann = parseFloat(document.getElementById('loanR').value) / 100 || 0;
+    const years = parseFloat(document.getElementById('loanY').value) || 0;
+    const m = parseInt(document.getElementById('loanFreq').value) || 12;
+    if(P<=0 || years<=0){ alert('请输入正确的本金与年限'); return; }
+    const n = years * m;
+    const r = r_ann / m;
+    let monthly = 0;
+    if(r === 0) monthly = P / n;
+    else monthly = P * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+    const total = monthly * n;
+    const interest = total - P;
+    document.getElementById('loanResult').innerHTML = `
+      <table class="table">
+        <tr><th>每期还款</th><td>${monthly.toFixed(2)}</td></tr>
+        <tr><th>期数 (n)</th><td>${n}</td></tr>
+        <tr><th>总还款</th><td>${total.toFixed(2)}</td></tr>
+        <tr><th>支付利息</th><td>${interest.toFixed(2)}</td></tr>
+      </table>
+    `;
+  }
+
+  // ---------------- 卡片3：投资回报（FV & CAGR） ----------------
+  function card3HTML(){
+    return `
+      <div style="max-width:720px;margin:0 auto;">
+        <div class="formRow" style="gap:8px;flex-wrap:wrap;">
+          <label>初始本金 PV : <input id="invPV" type="number" value="10000"></label>
+          <label>年利率 (%) : <input id="invR" type="number" step="0.0001" value="6"></label>
+          <label>年数 (年) : <input id="invY" type="number" value="10"></label>
+          <label>每期追加 PMT : <input id="invPMT" type="number" value="0"></label>
+          <label>每年期数 (periods/year) : <input id="invPer" type="number" value="1"></label>
+          <button class="btn" onclick="calcInvestment()">计算</button>
+        </div>
+        <div id="invResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">说明：FV 采用常见年金公式；CAGR 根据年数计算复合年化增长率。</div>
+      </div>
+    `;
+  }
+  function calcInvestment(){
+    if(activeCard!=='card3') return;
+    const PV = parseFloat(document.getElementById('invPV').value) || 0;
+    const r_ann = (parseFloat(document.getElementById('invR').value)||0)/100;
+    const years = parseFloat(document.getElementById('invY').value) || 0;
+    const PMT = parseFloat(document.getElementById('invPMT').value) || 0;
+    const per = parseInt(document.getElementById('invPer').value) || 1;
+    const n = years * per;
+    const r = r_ann / per;
+    let FV = 0;
+    if(r === 0) FV = PV + PMT * n;
+    else FV = PV * Math.pow(1 + r, n) + PMT * ( (Math.pow(1+r,n) - 1) / r );
+    const CAGR = (PV > 0) ? (Math.pow(FV / PV, 1/years) - 1) : null;
+    document.getElementById('invResult').innerHTML = `
+      <table class="table">
+        <tr><th>未来值 (FV)</th><td>${FV.toFixed(2)}</td></tr>
+        <tr><th>年数</th><td>${years}</td></tr>
+        <tr><th>复合年化收益率 (CAGR)</th><td>${CAGR===null? 'N/A' : (CAGR*100).toFixed(4)+'%'}</td></tr>
+      </table>
+    `;
+  }
+
+  // ---------------- 卡片4：性价比 ----------------
+  // 允许用户添加多个项目：名称、性能分、价格；计算 性价比 = performance / price（可乘以 1000 以便阅读），并排序显示
+  function card4HTML(){
+    return `
+      <div style="max-width:900px;margin:0 auto;">
+        <div class="formRow" style="gap:8px;">
+          <input id="itemName" placeholder="名称" type="text">
+          <input id="itemScore" placeholder="性能分 (数值)" type="number" step="0.01">
+          <input id="itemPrice" placeholder="价格 (元)" type="number" step="0.01">
+          <button class="btn" onclick="addPriceItem()">添加</button>
+          <button class="btn" onclick="clearPriceItems()">清空</button>
+        </div>
+        <div id="priceList" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">说明：性价比计算为 performance / price（数值越大越划算）。</div>
+      </div>
+    `;
+  }
+
+  let priceItems = [];
+  function addPriceItem(){
+    if(activeCard!=='card4') return;
+    const name = (document.getElementById('itemName').value||'未命名').trim();
+    const score = parseFloat(document.getElementById('itemScore').value) || 0;
+    const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+    if(price <= 0){ alert('价格需大于 0'); return; }
+    priceItems.push({name,score,price,ratio: score / price});
+    renderPriceItems();
+    document.getElementById('itemName').value=''; document.getElementById('itemScore').value=''; document.getElementById('itemPrice').value='';
+  }
+  function renderPriceItems(){
+    if(activeCard!=='card4') return;
+    const out = priceItems.slice().sort((a,b)=> b.ratio - a.ratio)
+      .map((it,idx)=> `<tr><td>${idx+1}</td><td>${escapeHtml(it.name)}</td><td>${it.score}</td><td>${it.price.toFixed(2)}</td><td>${(it.ratio).toFixed(6)}</td></tr>`).join('');
+    document.getElementById('priceList').innerHTML = `
+      <table class="table">
+        <thead><tr><th>#</th><th>名称</th><th>性能分</th><th>价格</th><th>性价比 (得分/元)</th></tr></thead>
+        <tbody>${out}</tbody>
+      </table>
+    `;
+  }
+  function clearPriceItems(){ priceItems=[]; if(activeCard==='card4') document.getElementById('priceList').innerHTML=''; }
+
+  // ---------------- 卡片5：利率换算 ----------------
+  function card5HTML(){
+    return `
+      <div style="max-width:720px;margin:0 auto;">
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <label>年利率（%）: <input id="rateInput" type="number" step="0.0001" value="6"></label>
+          <label>复利频率 m: <input id="rateM" type="number" value="12"></label>
+          <button class="btn" onclick="convertRate()">换算</button>
+        </div>
+        <div id="rateResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">说明：有效年利率 (EAR) = (1 + r_nom/m)^m - 1。可以在输入名义年利率与 m 后换算。</div>
+      </div>
+    `;
+  }
+  function convertRate(){
+    if(activeCard!=='card5') return;
+    const r_nom = (parseFloat(document.getElementById('rateInput').value)||0) / 100;
+    const m = parseInt(document.getElementById('rateM').value) || 1;
+    const EAR = Math.pow(1 + r_nom / m, m) - 1;
+    // 反算名义利率（若给定 EAR）
+    const js = `
+      <table class="table">
+        <tr><th>名义年利率 (r_nom)</th><td>${(r_nom*100).toFixed(6)}%</td></tr>
+        <tr><th>复利频率 m</th><td>${m}</td></tr>
+        <tr><th>有效年利率 (EAR)</th><td>${(EAR*100).toFixed(6)}%</td></tr>
+      </table>
+    `;
+    document.getElementById('rateResult').innerHTML = js;
+  }
+
+  // ---------------- 卡片6：微积分（积分，数值） ----------------
+  // 支持用户输入 f(x)，区间 [a,b]，n（分割数，必须为偶数用于 Simpson）
+  function card6HTML(){
+    return `
+      <div style="max-width:900px;margin:0 auto;">
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <label>函数 f(x): <input id="intFunc" type="text" value="sin(x)"></label>
+          <label>a: <input id="intA" type="number" value="0"></label>
+          <label>b: <input id="intB" type="number" value="3.1416"></label>
+          <label>分割 n (偶数): <input id="intN" type="number" value="1000"></label>
+          <button class="btn" onclick="calcIntegral()">计算定积分</button>
+        </div>
+        <div id="intResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">函数表达式示例： sin(x), cos(x), exp(x), x^2, log(x), sqrt(x)。^ 会自动转为幂运算。</div>
+      </div>
+    `;
+  }
+
+  // 辅助：安全检查并创建函数 f(x)
+  function buildFunctionFromString(s){
+    // 允许的字符（数字、空格、运算符、字母、_、小数点、括号、逗号、^）
+    // 只允许 a--z A--Z 数字和常用运算符，以减少风险
+    const allowed = /^[0-9a-zA-Z+\-*/().,\s^%]*$/;
+    if(!allowed.test(s)) return null;
+    // 替换 ^ -> **
+    const expr = s.replace(/\^/g,'**');
+    // 限制部分危险字（如 while, for, Function, window, document, eval, fetch 等）
+    const forbidden = /(window|document|eval|Function|fetch|XMLHttpRequest|while|for|=>|process|require)/i;
+    if(forbidden.test(expr)) return null;
+    // 创建函数，Math.* 函数可直接调用（在表达式里写 Math.sin 也行），但我们也允许写 sin(x) -> 使用 withMath wrapper
+    try {
+      // Create a safe wrapper that exposes Math functions as local variables
+      const fn = new Function('x', `
+        const {sin,cos,tan,asin,acos,atan,exp,log,sqrt,pow,abs,PI,e,round,floor,ceil} = Math;
+        return (${expr});
+      `);
+      // test it
+      const test = fn(1);
+      return fn;
+    } catch(e){
+      return null;
+    }
+  }
+
+  function calcIntegral(){
+    if(activeCard!=='card6') return;
+    const s = (document.getElementById('intFunc').value||'').trim();
+    const a = parseFloat(document.getElementById('intA').value);
+    const b = parseFloat(document.getElementById('intB').value);
+    let n = parseInt(document.getElementById('intN').value) || 100;
+    if(isNaN(a)||isNaN(b)){ alert('请输入正确区间'); return; }
+    if(n < 2) n = 2;
+    if(n % 2 === 1) n++; // Simpson 要偶数
+    const fn = buildFunctionFromString(s);
+    if(!fn){ alert('函数解析失败或包含不允许的字符'); return; }
+    // Simpson's rule
+    const h = (b - a) / n;
+    let sum = 0;
+    try {
+      for(let i=0;i<=n;i++){
+        const x = a + i*h;
+        const fx = Number(fn(x));
+        if(!isFinite(fx)){ alert('函数在积分区间存在非有限值'); return; }
+        const coef = (i===0 || i===n) ? 1 : (i%2===0 ? 2 : 4);
+        sum += coef * fx;
+      }
+      const integral = (h/3) * sum;
+      document.getElementById('intResult').innerHTML = `<div class="small">积分结果（数值近似）: <strong>${integral}</strong></div>`;
+    } catch(e){
+      alert('函数计算出错: ' + (e.message||e));
+    }
+  }
+
+  // ---------------- 卡片7：微积分（导数） ----------------
+  function card7HTML(){
+    return `
+      <div style="max-width:720px;margin:0 auto;">
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <label>函数 f(x): <input id="derivFunc" value="sin(x)" type="text"></label>
+          <label>点 x0: <input id="derivX0" value="0.5" type="number"></label>
+          <label>h (可选小量): <input id="derivH" value="1e-6" type="number" step="any"></label>
+          <button class="btn" onclick="calcDerivative()">计算导数</button>
+        </div>
+        <div id="derivResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">说明：使用中心差分法估算 f'(x0) ≈ (f(x0+h)-f(x0-h))/(2h)。</div>
+      </div>
+    `;
+  }
+
+  let derivative_expr = '';
+  function calcDerivative(){
+    if(activeCard!=='card7') return;
+    const s = (document.getElementById('derivFunc').value||'').trim();
+    const x0 = parseFloat(document.getElementById('derivX0').value);
+    let h = parseFloat(document.getElementById('derivH').value);
+    if(isNaN(x0)) { alert('请输入正确 x0'); return; }
+    if(isNaN(h) || h <= 0) h = 1e-6;
+    const fn = buildFunctionFromString(s);
+    if(!fn){ alert('函数解析失败或包含不允许的字符'); return; }
+    try {
+      const y1 = Number(fn(x0 + h));
+      const y2 = Number(fn(x0 - h));
+      const d = (y1 - y2) / (2*h);
+      document.getElementById('derivResult').innerHTML = `<div class="small">f'(${x0}) ≈ <strong>${d}</strong></div>`;
+    } catch(e){
+      alert('函数计算出错: ' + (e.message||e));
+    }
+  }
+
+  // ---------------- 卡片8：代数/方程求解 ----------------
+  function card8HTML(){
+    return `
+      <div style="max-width:720px;margin:0 auto;">
+        <h3>求解 ax^2 + bx + c = 0 （若 a=0 则退化为一次方程 bx + c = 0）</h3>
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <label>a: <input id="eqA" type="number" value="1"></label>
+          <label>b: <input id="eqB" type="number" value="0"></label>
+          <label>c: <input id="eqC" type="number" value="-1"></label>
+          <button class="btn" onclick="solveQuadratic()">求解</button>
+        </div>
+        <div id="eqResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">支持复根显示。</div>
+      </div>
+    `;
+  }
+  function solveQuadratic(){
+    if(activeCard!=='card8') return;
+    const a = parseFloat(document.getElementById('eqA').value) || 0;
+    const b = parseFloat(document.getElementById('eqB').value) || 0;
+    const c = parseFloat(document.getElementById('eqC').value) || 0;
+    if(Math.abs(a) < 1e-12){
+      // linear bx + c = 0
+      if(Math.abs(b) < 1e-12){ document.getElementById('eqResult').innerHTML = '<div>无解或无限多解 (a=b=0)</div>'; return; }
+      const x = -c / b;
+      document.getElementById('eqResult').innerHTML = `<div class="small">一次方程解: x = <strong>${x}</strong></div>`;
+      return;
+    }
+    const D = b*b - 4*a*c;
+    if(D >= 0){
+      const r1 = (-b + Math.sqrt(D)) / (2*a);
+      const r2 = (-b - Math.sqrt(D)) / (2*a);
+      document.getElementById('eqResult').innerHTML = `<div class="small">实根：x1=${r1}, x2=${r2}</div>`;
+    } else {
+      const real = (-b)/(2*a);
+      const im = Math.sqrt(-D)/(2*a);
+      document.getElementById('eqResult').innerHTML = `<div class="small">复根：x1=${real.toFixed(6)} + ${im.toFixed(6)}i , x2=${real.toFixed(6)} - ${im.toFixed(6)}i</div>`;
+    }
+  }
+
+  // ---------------- 卡片9：三角函数 ----------------
+  function card9HTML(){
+    return `
+      <div style="max-width:720px;margin:0 auto;">
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <label>角度/弧度输入: <input id="triAngle" type="number" value="30"></label>
+          <label>
+            单位:
+            <select id="triUnit">
+              <option value="deg">度（deg）</option>
+              <option value="rad">弧度（rad）</option>
+            </select>
+          </label>
+          <button class="btn" onclick="calcTrig()">计算</button>
+        </div>
+        <div id="triResult" style="margin-top:12px;"></div>
+        <div class="small" style="margin-top:8px;">可得到 sin / cos / tan 及反函数 (arcsin 等)。</div>
+      </div>
+    `;
+  }
+  function calcTrig(){
+    if(activeCard!=='card9') return;
+    const v = parseFloat(document.getElementById('triAngle').value) || 0;
+    const unit = document.getElementById('triUnit').value;
+    const rad = (unit==='deg') ? v * Math.PI / 180 : v;
+    const s = Math.sin(rad), c = Math.cos(rad);
+    let t = null;
+    if(Math.abs(c) > 1e-12) t = s / c;
+    const asin_v = (Math.abs(s) <= 1) ? Math.asin(s) : NaN;
+    const acos_v = (Math.abs(c) <= 1) ? Math.acos(c) : NaN;
+    const atan_v = Math.atan2(s,c);
+    document.getElementById('triResult').innerHTML = `
+      <table class="table">
+        <tr><th>sin</th><td>${s}</td></tr>
+        <tr><th>cos</th><td>${c}</td></tr>
+        <tr><th>tan</th><td>${t===null? '无定义' : t}</td></tr>
+        <tr><th>asin(sin)</th><td>${isNaN(asin_v)? 'N/A' : asin_v + ' rad'}</td></tr>
+        <tr><th>acos(cos)</th><td>${isNaN(acos_v)? 'N/A' : acos_v + ' rad'}</td></tr>
+        <tr><th>atan2</th><td>${atan_v} rad</td></tr>
+      </table>
+    `;
+  }
+
+  // ---------------- 卡片10：统计/概率 ----------------
+  function card10HTML(){
+    return `
+      <div style="max-width:900px;margin:0 auto;">
+        <h3>描述统计</h3>
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <textarea id="statsData" placeholder="输入一列数字，用逗号或空格分隔，例如：1,2,3,4,5" style="width:100%;min-height:80px;"></textarea>
+        </div>
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <button class="btn" onclick="calcStats()">计算</button>
+        </div>
+        <div id="statsResult" style="margin-top:12px;"></div>
+
+        <h3 style="margin-top:16px;">二项分布 (Binomial)</h3>
+        <div class="formRow" style="gap:8px;align-items:center;">
+          <label>试验次数 n: <input id="bn" type="number" value="10"></label>
+          <label>成功次数 k: <input id="bk" type="number" value="3"></label>
+          <label>单次成功概率 p: <input id="bp" type="number" step="0.01" value="0.5"></label>
+          <button class="btn" onclick="calcBinomial()">计算 P(X=k)</button>
+        </div>
+        <div id="binRes" style="margin-top:12px;"></div>
+      </div>
+    `;
+  }
+
+  function parseNumberList(str){
+    if(!str) return [];
+    const parts = str.split(/[\s,;]+/).filter(Boolean);
+    const nums = parts.map(s=> parseFloat(s)).filter(n=> !isNaN(n));
+    return nums;
+  }
+
+  function calcStats(){
+    if(activeCard!=='card10') return;
+    const arr = parseNumberList(document.getElementById('statsData').value);
+    if(arr.length===0){ alert('请输入一组数字'); return; }
+    const n = arr.length;
+    const mean = arr.reduce((a,b)=>a+b,0)/n;
+    const sorted = arr.slice().sort((a,b)=>a-b);
+    const median = (n%2===1) ? sorted[(n-1)/2] : (sorted[n/2 -1] + sorted[n/2]) / 2;
+    const variance = arr.reduce((a,b)=> a + Math.pow(b-mean,2), 0) / n; // population variance
+    const std = Math.sqrt(variance);
+    // mode: simplest approach
+    const freq = {}; arr.forEach(x=> freq[x] = (freq[x]||0)+1);
+    const maxFreq = Math.max(...Object.values(freq));
+    const modes = Object.keys(freq).filter(k=> freq[k]===maxFreq).map(Number);
+    document.getElementById('statsResult').innerHTML = `
+      <table class="table">
+        <tr><th>样本大小 n</th><td>${n}</td></tr>
+        <tr><th>均值 (mean)</th><td>${mean}</td></tr>
+        <tr><th>中位数 (median)</th><td>${median}</td></tr>
+        <tr><th>众数 (mode)</th><td>${modes.join(', ')}</td></tr>
+        <tr><th>方差 (population)</th><td>${variance}</td></tr>
+        <tr><th>标准差 (population)</th><td>${std}</td></tr>
+      </table>
+    `;
+  }
+
+  function factorial(n){
+    if(n<0) return NaN;
+    if(n===0) return 1;
+    let r=1;
+    for(let i=1;i<=n;i++) r*=i;
+    return r;
+  }
+  function comb(n,k){
+    if(k<0 || k>n) return 0;
+    // use multiplicative formula for integer safety
+    k = Math.min(k, n-k);
+    let num=1, den=1;
+    for(let i=1;i<=k;i++){ num *= (n - (k - i)); den *= i; }
+    return num / den;
+  }
+
+  function calcBinomial(){
+    if(activeCard!=='card10') return;
+    const n = parseInt(document.getElementById('bn').value) || 0;
+    const k = parseInt(document.getElementById('bk').value) || 0;
+    const p = parseFloat(document.getElementById('bp').value) || 0;
+    if(n<0 || k<0 || p<0 || p>1){ alert('请输入合理参数'); return; }
+    // P(X=k) = C(n,k) p^k (1-p)^(n-k)
+    const c = comb(n,k);
+    const prob = c * Math.pow(p,k) * Math.pow(1-p, n-k);
+    document.getElementById('binRes').innerHTML = `<div class="small">P(X=${k}) = ${prob}</div>`;
+  }
+
+  // ---------- 小工具 ----------
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+</script>
+</body>
+</html>
+
+
